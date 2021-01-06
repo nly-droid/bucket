@@ -13,12 +13,18 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
 
 import java.util.Iterator;
 
 public class Drop extends ApplicationAdapter {
-	private Texture bucketImg;
+  public static final int dropRate = 1000000000;
+  public static final int VIEWPORT_WIDTH = 800;
+  public static final int VIEWPORT_HEIGHT = 480;
+  public static final int initialHeight = 20;
+  public static final int bucketMoveSpeed = 200;
+  private Texture bucketImg;
 	private Texture drop;
 	private Music rain;
 	private Sound waterDrop;
@@ -29,7 +35,13 @@ public class Drop extends ApplicationAdapter {
   private Vector3 touchPos;
 	private Rectangle bucket;
 
-	private Array<Rectangle> drops;
+	private final Array<RainDrop> activeDrops = new Array<>();
+  private final Pool<RainDrop> dropPool = new Pool<RainDrop>() {
+    @Override
+    protected RainDrop newObject() {
+      return new RainDrop();
+    }
+  };
 	private long lastDropTime;
 
 	@Override
@@ -47,19 +59,18 @@ public class Drop extends ApplicationAdapter {
     rain.play();
 
     camera = new OrthographicCamera();
-    camera.setToOrtho(false, 800, 480);
+    camera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
     batch = new SpriteBatch();
 
     bucket = new Rectangle();
-    bucket.x = (float) (800/2 - 64/2);
-    bucket.y = 20;
+    bucket.x = (float) (VIEWPORT_WIDTH/2 - 64/2);
+    bucket.y = initialHeight;
     bucket.width = 64;
     bucket.height = 64;
 
     touchPos = new Vector3();
 
-    drops = new Array<>();
     spawnRaindrop();
 	}
 
@@ -72,8 +83,8 @@ public class Drop extends ApplicationAdapter {
     batch.setProjectionMatrix(camera.combined);
     batch.begin();
     batch.draw(bucketImg, bucket.x, bucket.y);
-    for(Rectangle raindrop: drops) {
-      batch.draw(drop, raindrop.x, raindrop.y);
+    for(RainDrop raindrop: activeDrops) {
+      batch.draw(drop, raindrop.getX(), raindrop.getY());
     }
     batch.end();
 
@@ -83,37 +94,38 @@ public class Drop extends ApplicationAdapter {
       bucket.x = touchPos.x - (float) 64/2;
     }
 
-    if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) bucket.x -= 200 * Gdx.graphics.getDeltaTime();
-    if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) bucket.x += 200 * Gdx.graphics.getDeltaTime();
-
+    if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) bucket.x -= bucketMoveSpeed * Gdx.graphics.getDeltaTime();
+    if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) bucket.x += bucketMoveSpeed * Gdx.graphics.getDeltaTime();
+    
+    // make sure our bucket stays within the screen limits
     if(bucket.x < 0) bucket.x = 0;
-    if(bucket.x > 800 - 64) bucket.x = 800 - 64;
+    if(bucket.x > VIEWPORT_WIDTH - 64) bucket.x = VIEWPORT_WIDTH - 64;
 
-    if(TimeUtils.nanoTime() - lastDropTime > 1000000000) spawnRaindrop();
+    if(TimeUtils.nanoTime() - lastDropTime > dropRate) spawnRaindrop();
 
-    for (Iterator<Rectangle> iter = drops.iterator(); iter.hasNext(); ) {
-      Rectangle raindrop = iter.next();
-      raindrop.y -= 200 * Gdx.graphics.getDeltaTime();
-      if(raindrop.y + 64 < 0) iter.remove();
-      if(raindrop.overlaps(bucket)) {
-        waterDrop.play();
+    for (Iterator<RainDrop> iter = activeDrops.iterator(); iter.hasNext(); ) {
+      RainDrop rainDrop = iter.next();
+      rainDrop.update();
+      if (!rainDrop.isAlive() || rainDrop.overlaps(bucket)){
+        if (rainDrop.overlaps(bucket)) {
+          waterDrop.play();
+        }
         iter.remove();
+        dropPool.free(rainDrop);
       }
     }
   }
 
   private void spawnRaindrop() {
-    Rectangle raindrop = new Rectangle();
-    raindrop.x = MathUtils.random(0, 800-64);
-    raindrop.y = 480;
-    raindrop.width = 64;
-    raindrop.height = 64;
-    drops.add(raindrop);
+    RainDrop rainDrop = dropPool.obtain();
+    rainDrop.init(MathUtils.random(0, VIEWPORT_WIDTH - 64), VIEWPORT_HEIGHT);
+    activeDrops.add(rainDrop);
     lastDropTime = TimeUtils.nanoTime();
   }
 
 	@Override
 	public void dispose () {
+    dropPool.clear();
 		batch.dispose();
 		bucketImg.dispose();
 		drop.dispose();

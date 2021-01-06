@@ -23,6 +23,14 @@ public class RainDrop implements Pool.Poolable{
     alive = true;
   }
 
+  public float getX(){
+    return drop.getX();
+  }
+
+  public float getY(){
+    return drop.getY();
+  }
+
   @Override
   public void reset() {
     drop.setPosition(0,0);
@@ -33,8 +41,18 @@ public class RainDrop implements Pool.Poolable{
     return (drop.y + 64 < 0);
   }
 
+  public boolean isAlive(){
+    return alive;
+  }
+
+  public boolean overlaps(Rectangle rec){
+    return drop.overlaps(rec);
+  }
+
   public void update () {
+    // Move at a constant speed of 200 pixels/units per second
     drop.y -= 200 * Gdx.graphics.getDeltaTime();
+    // If the raindrop is beneath the bottom edge of the screen, we remove it
     if (outOfScreen()) alive = false;
   }
 }
