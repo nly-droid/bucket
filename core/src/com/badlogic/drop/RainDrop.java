@@ -1,6 +1,8 @@
 package com.badlogic.drop;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Pool;
 
@@ -9,6 +11,8 @@ public class RainDrop implements Pool.Poolable{
   private Rectangle drop;
   private static final float width = 64;
   private static final float height = 64;
+  private static final Texture sprite = new Texture(Gdx.files.internal("drop.png"));
+  private static final Sound waterDrop = Gdx.audio.newSound(Gdx.files.internal("waterdrop.mp3"));
   private boolean alive;
 
   public RainDrop() {
@@ -16,6 +20,10 @@ public class RainDrop implements Pool.Poolable{
     drop.setHeight(height);
     drop.setWidth(width);
     this.alive = false;
+  }
+
+  public static Texture getSprite(){
+    return sprite;
   }
 
   public void init(float posX, float posY) {
@@ -54,5 +62,14 @@ public class RainDrop implements Pool.Poolable{
     drop.y -= 200 * Gdx.graphics.getDeltaTime();
     // If the raindrop is beneath the bottom edge of the screen, we remove it
     if (outOfScreen()) alive = false;
+  }
+
+  public static void dispose(){
+    sprite.dispose();
+    waterDrop.dispose();
+  }
+
+  public static void playDropSound(){
+    waterDrop.play((float) 0.8);
   }
 }

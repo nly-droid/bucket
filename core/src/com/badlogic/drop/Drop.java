@@ -4,7 +4,6 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
-import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -23,11 +22,9 @@ public class Drop extends ApplicationAdapter {
   public static final int VIEWPORT_WIDTH = 800;
   public static final int VIEWPORT_HEIGHT = 480;
   public static final int initialHeight = 20;
-  public static final int bucketMoveSpeed = 200;
+  public static final int bucketMoveSpeed = 550;
   private Texture bucketImg;
-	private Texture drop;
 	private Music rain;
-	private Sound waterDrop;
 	private SpriteBatch batch;
 
 	private OrthographicCamera camera;
@@ -46,12 +43,10 @@ public class Drop extends ApplicationAdapter {
 
 	@Override
 	public void create () {
-    // load the images for the droplet and the bucket, 64x64 pixels each
-    drop = new Texture(Gdx.files.internal("drop.png"));
+    // load the images for the the bucket, 64x64 pixels each
     bucketImg = new Texture(Gdx.files.internal("bucket.png"));
 
-    // load the drop sound effect and the rain background "music"
-    waterDrop = Gdx.audio.newSound(Gdx.files.internal("waterdrop.mp3"));
+    // load the the rain background "music"
     rain = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
 
     // start the playback of the background music immediately
@@ -84,7 +79,7 @@ public class Drop extends ApplicationAdapter {
     batch.begin();
     batch.draw(bucketImg, bucket.x, bucket.y);
     for(RainDrop raindrop: activeDrops) {
-      batch.draw(drop, raindrop.getX(), raindrop.getY());
+      batch.draw(RainDrop.getSprite(), raindrop.getX(), raindrop.getY());
     }
     batch.end();
 
@@ -108,7 +103,7 @@ public class Drop extends ApplicationAdapter {
       rainDrop.update();
       if (!rainDrop.isAlive() || rainDrop.overlaps(bucket)){
         if (rainDrop.overlaps(bucket)) {
-          waterDrop.play();
+          RainDrop.playDropSound();
         }
         iter.remove();
         dropPool.free(rainDrop);
@@ -125,11 +120,9 @@ public class Drop extends ApplicationAdapter {
 
 	@Override
 	public void dispose () {
-    dropPool.clear();
+    RainDrop.dispose();
 		batch.dispose();
 		bucketImg.dispose();
-		drop.dispose();
 		rain.dispose();
-		waterDrop.dispose();
 	}
 }
